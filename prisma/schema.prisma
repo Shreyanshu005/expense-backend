@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  groups        GroupMember[]
+  expenses      Expense[]      @relation("PaidBy")
+  expenseSplits ExpenseSplit[]
+  settlements   Settlement[]   @relation("Payer")
+  receivedSettlements Settlement[] @relation("Receiver")
+}
+
+model Group {
+  id           String        @id @default(uuid())
+  name         String
+  description  String?
+  inviteCode   String        @unique
+  createdBy    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  members      GroupMember[]
+  expenses     Expense[]
+  settlements  Settlement[]
+  
+  @@index([inviteCode])
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  userId    String
+  groupId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, groupId])
+}
+
+model Expense {
+  id          String         @id @default(uuid())
+  description String
+  amount      Float
+  category    String
+  splitType   String         @default("EQUAL") // EQUAL, EXACT, PERCENTAGE
+  paidById    String
+  groupId     String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  paidBy      User           @relation("PaidBy", fields: [paidById], references: [id])
+  group       Group          @relation(fields: [groupId], references: [id])
+  splits      ExpenseSplit[]
+  
+  @@index([paidById])
+  @@index([groupId])
+}
+
+model ExpenseSplit {
+  id         String   @id @default(uuid())
+  expenseId  String
+  userId     String
+  amount     Float
+  percentage Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+  
+  @@unique([expenseId, userId])
+}
+
+model Settlement {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String?
+  method      String   // UPI, CASH
+  paidById    String
+  paidToId    String
+  groupId     String
+  createdAt   DateTime @default(now())
+  
+  payer    User   @relation("Payer", fields: [paidById], references: [id])
+  receiver User   @relation("Receiver", fields: [paidToId], references: [id])
+  group    Group  @relation(fields: [groupId], references: [id])
+  
+  @@index([paidById])
+  @@index([paidToId])
+  @@index([groupId])
+}
