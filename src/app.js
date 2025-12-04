@@ -3,7 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('@prisma/client');
-const { errorHandler } = require('./middleware/errorHandler');
+const errorHandler = require('./middleware/errorHandler');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -46,8 +46,8 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/settlements', settlementRoutes);
 app.use('/api/balances', balanceRoutes);
 
-// 404 handler
-app.all('*', (req, res, next) => {
+// 404 handler - register after all other routes
+app.use((req, res, next) => {
   res.status(404).json({
     status: 'error',
     message: `Can't find ${req.originalUrl} on this server!`

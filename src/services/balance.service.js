@@ -51,13 +51,13 @@ const minimizeCashFlow = (balances) => {
   // While there are people with non-zero balances
   while (nonZeroBalances.length > 1) {
     // Find the person with the maximum credit (most positive)
-    const maxCreditIdx = nonZeroBalances.reduce(
+    let maxCreditIdx = nonZeroBalances.reduce(
       (maxIdx, user, idx, arr) => (user.amount > arr[maxIdx].amount ? idx : maxIdx),
       0
     );
     
     // Find the person with the maximum debit (most negative)
-    const maxDebitIdx = nonZeroBalances.reduce(
+    let maxDebitIdx = nonZeroBalances.reduce(
       (minIdx, user, idx, arr) => (user.amount < arr[minIdx].amount ? idx : minIdx),
       0
     );
@@ -82,14 +82,13 @@ const minimizeCashFlow = (balances) => {
     // Remove users with zero balance
     if (Math.abs(maxCredit.amount) < 0.01) {
       nonZeroBalances.splice(maxCreditIdx, 1);
-      // Adjust index if we removed an element before maxDebitIdx
-      if (maxCreditIdx < maxDebitIdx) {
-        maxDebitIdx--;
-      }
     }
     
     if (Math.abs(maxDebit.amount) < 0.01) {
-      nonZeroBalances.splice(maxDebitIdx, 1);
+      const removalIdx = maxDebitIdx > maxCreditIdx && Math.abs(maxCredit.amount) < 0.01
+        ? maxDebitIdx - 1
+        : maxDebitIdx;
+      nonZeroBalances.splice(removalIdx, 1);
     }
   }
   
