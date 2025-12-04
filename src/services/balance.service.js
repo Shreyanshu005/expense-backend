@@ -132,8 +132,35 @@ const getGroupBalances = async (groupId, userId) => {
     },
   });
 
+  // Get all settlements within the group
+  const settlements = await prisma.settlement.findMany({
+    where: { groupId },
+    select: {
+      paidById: true,
+      paidToId: true,
+      amount: true,
+    },
+  });
+
   // Calculate raw balances
   const balances = calculateBalances(expenses);
+
+  // Apply settlements to balances (settlements reduce outstanding debt between members)
+  settlements.forEach((settlement) => {
+    const { paidById, paidToId, amount } = settlement;
+    const settlementAmount = parseFloat(amount);
+
+    if (!balances.has(paidById)) {
+      balances.set(paidById, 0);
+    }
+
+    if (!balances.has(paidToId)) {
+      balances.set(paidToId, 0);
+    }
+
+    balances.set(paidById, balances.get(paidById) + settlementAmount);
+    balances.set(paidToId, balances.get(paidToId) - settlementAmount);
+  });
   
   // Get user details for all users with non-zero balances
   const userIds = Array.from(balances.keys());
